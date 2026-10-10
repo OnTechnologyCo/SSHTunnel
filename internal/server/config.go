@@ -24,7 +24,7 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-const Version = "1.3.1"
+const Version = "1.4.0"
 
 type User struct {
 	Name               string   `json:"name"`
@@ -284,6 +284,15 @@ func ValidateConfig(c Config) error {
 	}
 	if err := validateWeb(c.Web); err != nil {
 		return err
+	}
+	if c.Web.Enabled && c.Web.TLSMode == "native" {
+		_, tlsPort, _ := net.SplitHostPort(httpsListen(c.Web))
+		for _, addr := range []string{c.Listen, c.AdminListen, c.Web.Listen} {
+			_, port, _ := net.SplitHostPort(addr)
+			if port == tlsPort {
+				return errors.New("HTTPS 포트는 SSH·관리·내부 HTTP 포트와 달라야 합니다")
+			}
+		}
 	}
 	if c.Broker.Enabled && c.Broker.PublicHost == "" && !c.Web.Enabled {
 		return errors.New("TCP 공개 주소 또는 웹 터널 도메인을 설정하세요")

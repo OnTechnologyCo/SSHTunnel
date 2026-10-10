@@ -18,17 +18,32 @@ import (
 // WebConfig는 모든 웹 터널이 공유하는 HTTP 게이트웨이입니다.
 // HTTPS 인증서는 앞단 프록시에서 처리하고 Host를 그대로 전달합니다.
 type WebConfig struct {
-	Enabled    bool   `json:"enabled"`
-	Listen     string `json:"listen"`
-	BaseDomain string `json:"baseDomain"`
-	Scheme     string `json:"scheme"`
-	MaxBodyMB  int    `json:"maxBodyMB"`
+	Enabled     bool   `json:"enabled"`
+	Listen      string `json:"listen"`
+	BaseDomain  string `json:"baseDomain"`
+	Scheme      string `json:"scheme"`
+	MaxBodyMB   int    `json:"maxBodyMB"`
+	TLSMode     string `json:"tlsMode,omitempty"`
+	HTTPSListen string `json:"httpsListen,omitempty"`
 }
 
 func DefaultWebConfig() WebConfig {
 	return WebConfig{Listen: "127.0.0.1:17894", Scheme: "https", MaxBodyMB: 128}
 }
 func validateWeb(c WebConfig) error {
+	if c.TLSMode != "" && c.TLSMode != "proxy" && c.TLSMode != "native" {
+		return errors.New("HTTPS 처리 방식은 native 또는 proxy입니다")
+	}
+	if c.TLSMode == "native" {
+		h, p, e := net.SplitHostPort(httpsListen(c))
+		inner, _, _ := net.SplitHostPort(c.Listen)
+		if e != nil || net.ParseIP(h) == nil || !validPort(p, false) || c.Scheme != "https" {
+			return errors.New("내장 HTTPS 수신 주소와 HTTPS 방식을 확인하세요")
+		}
+		if ip := net.ParseIP(inner); ip == nil || !ip.IsLoopback() {
+			return errors.New("내장 HTTPS 사용 시 내부 HTTP 게이트웨이는 루프백 주소여야 합니다")
+		}
+	}
 	host, port, err := net.SplitHostPort(c.Listen)
 	if err != nil || net.ParseIP(host) == nil || !validPort(port, false) {
 		return errors.New("웹 게이트웨이 수신 주소는 IP:포트 형식이어야 합니다")
@@ -213,6 +228,9 @@ func (s *Server) WebDeployment() map[string]string {
 	domain := c.BaseDomain
 	if domain == "" {
 		domain = "tunnel.example.com"
+	}
+	if c.TLSMode == "native" {
+		return map[string]string{"dns": "*." + domain + " → 터널 서버의 공개 IP (DNS 전용)", "certificate": "*." + domain, "urlExample": "https://a7k2m9." + domain, "native": "내장 HTTPS 수신: " + httpsListen(c) + "\n별도 프록시 설치가 필요 없습니다. HTTPS 인증서 화면에서 자동 발급 또는 기존 인증서를 등록하세요.\n인증서 등록과 방화벽 허용 후 실제 발급된 주소로 접속하세요.", "maxBodyMB": strconv.Itoa(c.MaxBodyMB)}
 	}
 	_, port, _ := net.SplitHostPort(c.Listen)
 	upstream := net.JoinHostPort("127.0.0.1", port)

@@ -29,6 +29,7 @@ func writeJSON(w http.ResponseWriter, status int, value any) {
 func (s *Server) AdminHandler() http.Handler {
 	mux := http.NewServeMux()
 	s.brokerAdmin(mux)
+	s.https.admin(mux)
 	mux.HandleFunc("GET /api/web-deployment", func(w http.ResponseWriter, r *http.Request) { writeJSON(w, 200, s.WebDeployment()) })
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, 200, map[string]any{"status": "running", "version": Version})

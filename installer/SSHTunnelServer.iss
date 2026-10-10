@@ -1,4 +1,4 @@
-﻿#define AppVersion "1.3.1"
+﻿#define AppVersion "1.4.0"
 
 [Setup]
 AppId=OnTech.SSHTunnelServer
@@ -23,7 +23,7 @@ WizardStyle=modern
 AppMutex=Local\OnTech.SSHTunnelServer.Tray
 CloseApplications=no
 RestartApplications=no
-VersionInfoVersion=1.3.1.0
+VersionInfoVersion=1.4.0.0
 
 [Languages]
 Name: "korean"; MessagesFile: "compiler:Languages\Korean.isl"

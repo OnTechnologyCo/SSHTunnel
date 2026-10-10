@@ -1,4 +1,4 @@
-﻿param([string]$Setup = (Join-Path (Split-Path $PSScriptRoot -Parent) 'output\SSHTunnelServer-Setup-1.3.1.exe'))
+﻿param([string]$Setup = (Join-Path (Split-Path $PSScriptRoot -Parent) 'output\SSHTunnelServer-Setup-1.4.0.exe'))
 $ErrorActionPreference = 'Stop'
 $uninstallKey='HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\OnTech.SSHTunnelServer_is1'
 $runKey='HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'

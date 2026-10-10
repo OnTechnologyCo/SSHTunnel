@@ -62,12 +62,14 @@ type Server struct {
 	webServer     *http.Server
 	webListener   net.Listener
 	webDone       chan struct{}
+	https         *httpsManager
 }
 
 func New(s *Store) *Server {
 	ctx, cancel := context.WithCancel(context.Background())
 	v := &Server{Store: s, ctx: ctx, cancel: cancel, started: time.Now(), raw: map[net.Conn]bool{}, peers: map[string]*peer{}, attempts: map[string]attempt{}, acceptDone: make(chan struct{}), passwordSlots: make(chan struct{}, 4), tunnels: map[string]*lease{}}
 	v.open.Store(s.Config().Open)
+	v.https = newHTTPSManager(v)
 	return v
 }
 func (s *Server) Start() error {
@@ -94,6 +96,7 @@ func (s *Server) Start() error {
 		}()
 	}
 	s.listener = l
+	s.https.start()
 	s.event("server", "SSH 수신 시작: "+l.Addr().String())
 	go s.accept()
 	return nil
@@ -341,6 +344,7 @@ func (s *Server) Apply(c Config) error {
 func (s *Server) Close() {
 	s.closeOnce.Do(func() {
 		s.cancel()
+		s.https.close()
 		if s.webServer != nil {
 			_ = s.webServer.Close()
 			<-s.webDone
