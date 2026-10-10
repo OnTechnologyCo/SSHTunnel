@@ -123,18 +123,18 @@ func run(path string) error {
 	defer web.Close()
 	webErrors := make(chan error, 1)
 	go func() { webErrors <- web.Serve(listener) }()
-	session, err := tunnel.Open(ctx, tunnel.Options{Server: cfg.Server, User: cfg.User, AccessKey: cfg.AccessKey, Fingerprint: cfg.Fingerprint, Target: listener.Addr().String(), Name: "브라우저 통신 테스트", MaxConnections: 32})
+	session, err := tunnel.Open(ctx, tunnel.Options{Protocol: "http", Server: cfg.Server, User: cfg.User, AccessKey: cfg.AccessKey, Fingerprint: cfg.Fingerprint, Target: listener.Addr().String(), Name: "브라우저 통신 테스트", MaxConnections: 32})
 	if err != nil {
 		return fmt.Errorf("터널 연결 실패: %w", err)
 	}
 	defer session.Close()
 	endpoint.Store(session.Endpoint().Address)
-	state := map[string]any{"url": "http://" + session.Endpoint().Address, "port": session.Endpoint().Port, "tunnelId": session.Endpoint().ID, "pid": os.Getpid(), "localTarget": listener.Addr().String(), "started": started}
+	state := map[string]any{"url": session.Endpoint().URL, "port": session.Endpoint().Port, "tunnelId": session.Endpoint().ID, "pid": os.Getpid(), "localTarget": listener.Addr().String(), "started": started}
 	stateBytes, _ := json.MarshalIndent(state, "", "  ")
 	if err := os.WriteFile(filepath.Join(filepath.Dir(path), "endpoint.json"), stateBytes, 0600); err != nil {
 		return err
 	}
-	log.Printf("준비 완료: http://%s", session.Endpoint().Address)
+	log.Printf("준비 완료: %s", session.Endpoint().URL)
 	select {
 	case <-ctx.Done():
 		return nil

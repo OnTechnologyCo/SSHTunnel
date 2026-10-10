@@ -29,12 +29,13 @@ func writeJSON(w http.ResponseWriter, status int, value any) {
 func (s *Server) AdminHandler() http.Handler {
 	mux := http.NewServeMux()
 	s.brokerAdmin(mux)
+	mux.HandleFunc("GET /api/web-deployment", func(w http.ResponseWriter, r *http.Request) { writeJSON(w, 200, s.WebDeployment()) })
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, 200, map[string]any{"status": "running", "version": Version})
 	})
 	mux.HandleFunc("GET /api/status", func(w http.ResponseWriter, r *http.Request) {
 		saved := s.Store.Config()
-		writeJSON(w, 200, map[string]any{"version": Version, "started": s.started, "sshAddress": s.Addr(), "adminAddress": s.active.AdminListen, "open": s.open.Load(), "fingerprint": s.Fingerprint(), "connections": s.Views(), "tunnels": s.TunnelViews(), "restartRequired": saved.Listen != s.active.Listen || saved.AdminListen != s.active.AdminListen})
+		writeJSON(w, 200, map[string]any{"version": Version, "started": s.started, "sshAddress": s.Addr(), "webAddress": s.WebAddr(), "adminAddress": s.active.AdminListen, "open": s.open.Load(), "fingerprint": s.Fingerprint(), "connections": s.Views(), "tunnels": s.TunnelViews(), "restartRequired": saved.Listen != s.active.Listen || saved.AdminListen != s.active.AdminListen || saved.Web != s.active.Web})
 	})
 	mux.HandleFunc("GET /api/config", func(w http.ResponseWriter, r *http.Request) {
 		c := s.Store.Config()

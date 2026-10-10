@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -30,14 +31,17 @@ type Options struct {
 	Target         string
 	Name           string
 	TunnelKey      string
+	Protocol       string // "http": 랜덤 웹 주소, "tcp" 또는 빈 값: 기존 포트 방식
 	MaxConnections int
 }
 type Endpoint struct {
-	ID      string `json:"id"`
-	Name    string `json:"name"`
-	Address string `json:"address"`
-	Host    string `json:"host"`
-	Port    int    `json:"port"`
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	Address  string `json:"address"`
+	Host     string `json:"host"`
+	Port     int    `json:"port"`
+	Protocol string `json:"protocol,omitempty"`
+	URL      string `json:"url,omitempty"`
 }
 type Session struct {
 	endpoint             Endpoint
@@ -68,6 +72,12 @@ func validKey(s string) bool {
 // 반환된 Session은 Target으로 데이터를 중계합니다. ctx 취소 또는 Close 시
 // 공개 주소와 활성 연결을 모두 닫습니다. 연결 손실 후에는 새 Open이 필요합니다.
 func Open(ctx context.Context, opts Options) (*Session, error) {
+	if opts.Protocol == "" {
+		opts.Protocol = "tcp"
+	}
+	if opts.Protocol != "tcp" && opts.Protocol != "http" {
+		return nil, errors.New("Protocol must be tcp or http")
+	}
 	if ctx == nil {
 		return nil, errors.New("context is required")
 	}
@@ -129,7 +139,11 @@ func Open(ctx context.Context, opts Options) (*Session, error) {
 	close(ignored)
 	client := ssh.NewClient(connection, channels, ignored)
 	incoming := client.HandleChannelOpen("tunnel-connection@ontech.dev")
-	payload, _ := json.Marshal(map[string]string{"key": opts.TunnelKey, "name": opts.Name})
+	request := map[string]string{"key": opts.TunnelKey, "name": opts.Name}
+	if opts.Protocol == "http" {
+		request["protocol"] = "http"
+	}
+	payload, _ := json.Marshal(request)
 	ok, reply, e := client.SendRequest("tunnel-open@ontech.dev", true, payload)
 	if e != nil {
 		client.Close()
@@ -147,13 +161,21 @@ func Open(ctx context.Context, opts Options) (*Session, error) {
 		return nil, errors.New(response.Error)
 	}
 	var endpoint Endpoint
-	if e = json.Unmarshal(reply, &endpoint); e != nil || endpoint.ID == "" || endpoint.Host == "" || endpoint.Port < 1 || endpoint.Port > 65535 {
+	if e = json.Unmarshal(reply, &endpoint); e != nil || endpoint.ID == "" || endpoint.Host == "" {
 		client.Close()
 		return nil, errors.New("invalid tunnel endpoint response")
 	}
-	if _, _, e = net.SplitHostPort(endpoint.Address); e != nil {
-		client.Close()
-		return nil, errors.New("invalid public address response")
+	if opts.Protocol == "http" {
+		u, err := url.Parse(endpoint.URL)
+		if err != nil || u == nil || (u.Scheme != "https" && u.Scheme != "http") || u.Host != endpoint.Host || u.Port() != "" || u.User != nil || u.Path != "" || u.RawQuery != "" || u.Fragment != "" || endpoint.Protocol != "http" || endpoint.Port != 0 || endpoint.Address != endpoint.Host {
+			client.Close()
+			return nil, errors.New("invalid web endpoint response")
+		}
+	} else {
+		if _, _, e = net.SplitHostPort(endpoint.Address); e != nil || endpoint.Port < 1 || endpoint.Port > 65535 {
+			client.Close()
+			return nil, errors.New("invalid public address response")
+		}
 	}
 	if e = ctx.Err(); e != nil {
 		client.Close()

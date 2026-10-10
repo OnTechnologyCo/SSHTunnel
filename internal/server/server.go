@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -58,6 +59,9 @@ type Server struct {
 	passwordSlots chan struct{}
 	brokerMu      sync.Mutex
 	tunnels       map[string]*lease
+	webServer     *http.Server
+	webListener   net.Listener
+	webDone       chan struct{}
 }
 
 func New(s *Store) *Server {
@@ -71,6 +75,23 @@ func (s *Server) Start() error {
 	l, e := net.Listen("tcp", s.active.Listen)
 	if e != nil {
 		return e
+	}
+	if s.active.Web.Enabled {
+		wl, err := net.Listen("tcp", s.active.Web.Listen)
+		if err != nil {
+			l.Close()
+			return fmt.Errorf("웹 터널 수신 포트: %w", err)
+		}
+		s.webListener = wl
+		s.webServer = s.makeWebServer()
+		s.webDone = make(chan struct{})
+		go func() {
+			defer close(s.webDone)
+			if err := s.webServer.Serve(wl); err != nil && err != http.ErrServerClosed {
+				s.event("error", "웹 터널 수신 중단")
+				s.DisconnectAll()
+			}
+		}()
 	}
 	s.listener = l
 	s.event("server", "SSH 수신 시작: "+l.Addr().String())
@@ -320,6 +341,10 @@ func (s *Server) Apply(c Config) error {
 func (s *Server) Close() {
 	s.closeOnce.Do(func() {
 		s.cancel()
+		if s.webServer != nil {
+			_ = s.webServer.Close()
+			<-s.webDone
+		}
 		if s.listener != nil {
 			_ = s.listener.Close()
 			<-s.acceptDone
@@ -537,7 +562,9 @@ func (p *peer) bridgeContext(ctx context.Context, tcp net.Conn, channel ssh.Chan
 		}
 		done <- e
 	}()
-	if e := <-done; e != nil {
+	e := <-done
+	_, isTCP := tcp.(*net.TCPConn)
+	if e != nil || !isTCP {
 		tcp.Close()
 		channel.Close()
 	}

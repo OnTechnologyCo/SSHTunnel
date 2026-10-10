@@ -24,7 +24,7 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-const Version = "1.2.0"
+const Version = "1.3.0"
 
 type User struct {
 	Name               string   `json:"name"`
@@ -50,6 +50,7 @@ type Config struct {
 	MaxForwards    int          `json:"maxReverseListenersPerConnection"`
 	Users          []User       `json:"users"`
 	Broker         BrokerConfig `json:"broker"`
+	Web            WebConfig    `json:"web"`
 }
 type Store struct {
 	mu        sync.RWMutex
@@ -62,7 +63,7 @@ type Store struct {
 }
 
 func DefaultConfig() Config {
-	return Config{Version: 1, Listen: "0.0.0.0:2222", AdminListen: "127.0.0.1:17893", Open: true, MaxConnections: 256, MaxChannels: 64, MaxForwards: 16, Users: []User{}, Broker: DefaultBrokerConfig()}
+	return Config{Version: 1, Listen: "0.0.0.0:2222", AdminListen: "127.0.0.1:17893", Open: true, MaxConnections: 256, MaxChannels: 64, MaxForwards: 16, Users: []User{}, Broker: DefaultBrokerConfig(), Web: DefaultWebConfig()}
 }
 func NewStore(dir string) (*Store, error) {
 	dir, err := filepath.Abs(dir)
@@ -280,6 +281,12 @@ func ValidateConfig(c Config) error {
 	}
 	if c.MaxConnections < 1 || c.MaxConnections > 4096 || c.MaxChannels < 1 || c.MaxChannels > 1024 || c.MaxForwards < 1 || c.MaxForwards > 256 || len(c.Users) > 256 {
 		return errors.New("연결 또는 계정 수 제한을 확인하세요")
+	}
+	if err := validateWeb(c.Web); err != nil {
+		return err
+	}
+	if c.Broker.Enabled && c.Broker.PublicHost == "" && !c.Web.Enabled {
+		return errors.New("TCP 공개 주소 또는 웹 터널 도메인을 설정하세요")
 	}
 	if err := validateBroker(c.Broker); err != nil {
 		return err

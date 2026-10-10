@@ -1,4 +1,4 @@
-﻿#define AppVersion "1.2.0"
+﻿#define AppVersion "1.3.0"
 
 [Setup]
 AppId=OnTech.SSHTunnelServer
@@ -23,7 +23,7 @@ WizardStyle=modern
 AppMutex=Local\OnTech.SSHTunnelServer.Tray
 CloseApplications=no
 RestartApplications=no
-VersionInfoVersion=1.2.0.0
+VersionInfoVersion=1.3.0.0
 
 [Languages]
 Name: "korean"; MessagesFile: "compiler:Languages\Korean.isl"
@@ -46,9 +46,9 @@ Name: "startup"; Description: "{cm:StartupTask}"; Flags: unchecked
 [Files]
 Source: "..\output\SSHTunnelServer.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\README.md"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\docs\*"; DestDir: "{app}\docs"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\output\docs\*"; DestDir: "{app}\docs"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "..\output\licenses\*"; DestDir: "{app}\licenses"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "..\scripts\*"; DestDir: "{app}\scripts"; Flags: ignoreversion
+Source: "..\output\scripts\*"; DestDir: "{app}\scripts"; Flags: ignoreversion
 Source: "..\Open-Admin.cmd"; DestDir: "{app}"; Flags: ignoreversion
 
 Source: "..\output\SDK\*"; DestDir: "{app}\SDK"; Flags: ignoreversion recursesubdirs createallsubdirs

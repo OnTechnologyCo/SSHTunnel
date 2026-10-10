@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"math/big"
 	"net"
+	"net/http"
 	"sort"
 	"strconv"
 	"strings"
@@ -57,9 +58,6 @@ func validateBroker(c BrokerConfig) error {
 	if c.PublicHost != "" && !validHost(c.PublicHost) {
 		return errors.New("자동 터널의 공개 주소에는 IP 또는 호스트 이름만 입력하세요")
 	}
-	if c.Enabled && c.PublicHost == "" {
-		return errors.New("자동 터널을 사용하려면 외부 클라이언트가 접속할 공개 IP/도메인을 설정하세요")
-	}
 	if net.ParseIP(c.BindIP) == nil || net.ParseIP(c.BindIP).IsMulticast() {
 		return errors.New("자동 터널 수신 IP를 확인하세요")
 	}
@@ -88,11 +86,13 @@ func CheckAccessKey(hash, key string) bool {
 }
 
 type TunnelInfo struct {
-	ID      string `json:"id"`
-	Name    string `json:"name"`
-	Address string `json:"address"`
-	Host    string `json:"host"`
-	Port    int    `json:"port"`
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	Address  string `json:"address"`
+	Host     string `json:"host"`
+	Port     int    `json:"port"`
+	Protocol string `json:"protocol,omitempty"`
+	URL      string `json:"url,omitempty"`
 }
 type TunnelView struct {
 	TunnelInfo
@@ -101,16 +101,20 @@ type TunnelView struct {
 	Connections int64     `json:"connections"`
 }
 type lease struct {
-	info        TunnelInfo
-	keyHash     string
-	owner       *peer
-	listener    net.Listener
-	ctx         context.Context
-	cancel      context.CancelFunc
-	started     time.Time
-	closed      atomic.Bool
-	connections atomic.Int64
-	closeOnce   sync.Once
+	info         TunnelInfo
+	keyHash      string
+	owner        *peer
+	listener     net.Listener
+	ctx          context.Context
+	cancel       context.CancelFunc
+	started      time.Time
+	closed       atomic.Bool
+	connections  atomic.Int64
+	closeOnce    sync.Once
+	webTransport *http.Transport
+	webMu        sync.Mutex
+	webStreams   map[net.Conn]bool
+	webWorkers   sync.WaitGroup
 }
 
 func (p *peer) forwardCount() int {
@@ -126,7 +130,14 @@ func (p *peer) forwardCount() int {
 	}
 	return n
 }
-func (p *peer) openLease(key, name string) (*lease, error) {
+func (p *peer) openLease(key, name string) (*lease, error) { return p.openLeaseMode(key, name, "tcp") }
+func (p *peer) openLeaseMode(key, name, protocol string) (*lease, error) {
+	if protocol == "" {
+		protocol = "tcp"
+	}
+	if protocol != "tcp" && protocol != "http" {
+		return nil, errors.New("터널 protocol은 tcp 또는 http입니다")
+	}
 	cfg := p.server.Store.Config().Broker
 	if !cfg.Enabled || !p.user.AllowTunnel || !p.server.open.Load() || p.ctx.Err() != nil {
 		return nil, errors.New("자동 터널이 비활성화되어 있거나 계정 권한이 없습니다")
@@ -149,6 +160,22 @@ func (p *peer) openLease(key, name string) (*lease, error) {
 			return nil, errors.New("이미 사용 중인 터널 키입니다")
 		}
 	}
+	if protocol == "http" {
+		web := s.Store.Config().Web
+		if !web.Enabled || web != s.active.Web {
+			return nil, errors.New("웹 터널 설정을 활성화한 뒤 서버를 재시작하세요")
+		}
+		ctx, cancel := context.WithCancel(p.ctx)
+		id := secret()[:32]
+		host := id + "." + web.BaseDomain
+		l := &lease{info: TunnelInfo{ID: id, Name: name, Address: host, Host: host, Protocol: "http", URL: web.Scheme + "://" + host}, keyHash: hash, owner: p, ctx: ctx, cancel: cancel, started: time.Now().UTC(), webStreams: map[net.Conn]bool{}}
+		l.webTransport = l.newWebTransport()
+		s.tunnels[id] = l
+		return l, nil
+	}
+	if cfg.PublicHost == "" {
+		return nil, errors.New("TCP 터널 공개 IP/도메인이 필요합니다")
+	}
 	span := cfg.PortMax - cfg.PortMin + 1
 	random, e := rand.Int(rand.Reader, big.NewInt(int64(span)))
 	if e != nil {
@@ -167,7 +194,7 @@ func (p *peer) openLease(key, name string) (*lease, error) {
 	}
 	port := listener.Addr().(*net.TCPAddr).Port
 	ctx, cancel := context.WithCancel(p.ctx)
-	l := &lease{info: TunnelInfo{ID: secret()[:24], Name: name, Address: net.JoinHostPort(cfg.PublicHost, strconv.Itoa(port)), Host: cfg.PublicHost, Port: port}, keyHash: hash, owner: p, listener: listener, ctx: ctx, cancel: cancel, started: time.Now().UTC()}
+	l := &lease{info: TunnelInfo{ID: secret()[:24], Name: name, Address: net.JoinHostPort(cfg.PublicHost, strconv.Itoa(port)), Host: cfg.PublicHost, Port: port, Protocol: "tcp"}, keyHash: hash, owner: p, listener: listener, ctx: ctx, cancel: cancel, started: time.Now().UTC()}
 	s.tunnels[l.info.ID] = l
 	return l, nil
 }
@@ -179,14 +206,15 @@ func (p *peer) brokerRequest(r *ssh.Request) {
 	}
 	if r.Type == "tunnel-open@ontech.dev" {
 		var input struct {
-			Key  string `json:"key"`
-			Name string `json:"name"`
+			Key      string `json:"key"`
+			Name     string `json:"name"`
+			Protocol string `json:"protocol,omitempty"`
 		}
 		if e := decode(r.Payload, &input); e != nil {
 			fail(errors.New("터널 요청 JSON 형식 오류"))
 			return
 		}
-		l, e := p.openLease(input.Key, input.Name)
+		l, e := p.openLeaseMode(input.Key, input.Name, input.Protocol)
 		if e != nil {
 			fail(e)
 			return
@@ -197,8 +225,10 @@ func (p *peer) brokerRequest(r *ssh.Request) {
 			return
 		}
 		p.server.event("tunnel", fmt.Sprintf("%s 자동 터널 개설: %s", p.user.Name, l.info.Address))
-		p.workers.Add(1)
-		go func() { defer p.workers.Done(); l.accept() }()
+		if l.listener != nil {
+			p.workers.Add(1)
+			go func() { defer p.workers.Done(); l.accept() }()
+		}
 		return
 	}
 	var input struct {
@@ -222,7 +252,10 @@ func (l *lease) Close() {
 	l.closeOnce.Do(func() {
 		l.closed.Store(true)
 		l.cancel()
-		_ = l.listener.Close()
+		if l.listener != nil {
+			_ = l.listener.Close()
+		}
+		l.closeWebStreams()
 		s := l.owner.server
 		s.brokerMu.Lock()
 		delete(s.tunnels, l.info.ID)

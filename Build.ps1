@@ -23,10 +23,18 @@ if ($LASTEXITCODE -ne 0) { throw 'Build failed.' }
 foreach ($name in @('Start-Server.cmd', 'Start-Server.vbs', 'Open-Admin.cmd', 'README.md')) {
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot $name) -Destination $OutputDir -Force
 }
-foreach ($name in @('scripts', 'docs')) {
+# Package only reusable files; never include machine-specific test notes/scripts.
+$bundles = @{
+    scripts = @('Install-Service.ps1','Uninstall-Service.ps1','Open-Admin.ps1')
+    docs = @('OPERATIONS.md','TUNNEL-API.md','WEB-TUNNELS.md')
+}
+foreach ($name in $bundles.Keys) {
     $destination = Join-Path $OutputDir $name
+    if (Test-Path $destination) { Remove-Item -LiteralPath $destination -Recurse -Force }
     New-Item -ItemType Directory -Path $destination -Force | Out-Null
-    Copy-Item -Path (Join-Path $PSScriptRoot "$name\*") -Destination $destination -Force
+    foreach ($file in $bundles[$name]) {
+        Copy-Item -LiteralPath (Join-Path $PSScriptRoot "$name\$file") -Destination $destination -Force
+    }
 }
 $licenses = Join-Path $OutputDir 'licenses'
 New-Item -ItemType Directory -Path $licenses -Force | Out-Null
@@ -48,7 +56,11 @@ foreach ($name in @('go.mod','go.sum')) {
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot $name) -Destination $sdk -Force
 }
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'docs\TUNNEL-API.md') -Destination (Join-Path $sdk 'README.md') -Force
-Compress-Archive -Path (Join-Path $sdk '*') -DestinationPath (Join-Path $OutputDir 'SSHTunnel-GoSDK-1.2.0.zip') -Force
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'docs\WEB-TUNNELS.md') -Destination $sdk -Force
+$sdkDocs = Join-Path $sdk 'docs'
+New-Item -ItemType Directory -Path $sdkDocs -Force | Out-Null
+foreach ($doc in @('TUNNEL-API.md','WEB-TUNNELS.md')) { Copy-Item -LiteralPath (Join-Path $PSScriptRoot ('docs\'+$doc)) -Destination $sdkDocs -Force }
+Compress-Archive -Path (Join-Path $sdk '*') -DestinationPath (Join-Path $OutputDir 'SSHTunnel-GoSDK-1.3.0.zip') -Force
 
 $dist = Join-Path $PSScriptRoot 'dist'
 New-Item -ItemType Directory -Path $dist -Force | Out-Null
