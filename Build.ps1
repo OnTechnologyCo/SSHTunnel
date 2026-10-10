@@ -1,4 +1,4 @@
-param([string]$OutputDir = (Join-Path $PSScriptRoot 'output'))
+﻿param([string]$OutputDir = (Join-Path $PSScriptRoot 'output'))
 $ErrorActionPreference = 'Stop'
 $windres = Get-Command windres.exe -ErrorAction SilentlyContinue
 if (-not $windres -and (Test-Path 'C:\mingw64\bin\windres.exe')) { $windres = Get-Item 'C:\mingw64\bin\windres.exe' }
@@ -20,12 +20,12 @@ if ($LASTEXITCODE -ne 0) { throw 'Static analysis failed.' }
 New-Item -ItemType Directory -Path $OutputDir -Force | Out-Null
 & go build -trimpath -ldflags '-s -w -H=windowsgui' -o (Join-Path $OutputDir 'SSHTunnelServer.exe') ./cmd/sshtunnel
 if ($LASTEXITCODE -ne 0) { throw 'Build failed.' }
-foreach ($name in @('Start-Server.cmd', 'Start-Server.vbs', 'Open-Admin.cmd', 'README.md')) {
+foreach ($name in @('Start-Server.cmd', 'Start-Server.vbs', 'Open-Admin.cmd', 'Configure-Firewall.cmd', 'README.md')) {
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot $name) -Destination $OutputDir -Force
 }
 # Package only reusable files; never include machine-specific test notes/scripts.
 $bundles = @{
-    scripts = @('Install-Service.ps1','Uninstall-Service.ps1','Open-Admin.ps1')
+    scripts = @('Install-Service.ps1','Uninstall-Service.ps1','Open-Admin.ps1','Configure-Firewall.ps1')
     docs = @('OPERATIONS.md','TUNNEL-API.md','WEB-TUNNELS.md')
 }
 foreach ($name in $bundles.Keys) {
@@ -60,12 +60,12 @@ Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'docs\WEB-TUNNELS.md') -Destinat
 $sdkDocs = Join-Path $sdk 'docs'
 New-Item -ItemType Directory -Path $sdkDocs -Force | Out-Null
 foreach ($doc in @('TUNNEL-API.md','WEB-TUNNELS.md')) { Copy-Item -LiteralPath (Join-Path $PSScriptRoot ('docs\'+$doc)) -Destination $sdkDocs -Force }
-Compress-Archive -Path (Join-Path $sdk '*') -DestinationPath (Join-Path $OutputDir 'SSHTunnel-GoSDK-1.3.0.zip') -Force
+Compress-Archive -Path (Join-Path $sdk '*') -DestinationPath (Join-Path $OutputDir 'SSHTunnel-GoSDK-1.3.1.zip') -Force
 
 $dist = Join-Path $PSScriptRoot 'dist'
 New-Item -ItemType Directory -Path $dist -Force | Out-Null
 # Include only distributable files. Never package a runtime data directory.
-$files = @('SSHTunnelServer.exe','Start-Server.cmd','Start-Server.vbs','Open-Admin.cmd','README.md','scripts','docs','licenses','SDK') | ForEach-Object { Join-Path $OutputDir $_ }
+$files = @('SSHTunnelServer.exe','Start-Server.cmd','Start-Server.vbs','Open-Admin.cmd','Configure-Firewall.cmd','README.md','scripts','docs','licenses','SDK') | ForEach-Object { Join-Path $OutputDir $_ }
 $archive = Join-Path $dist 'SSHTunnelServer-windows-amd64.zip'
 Compress-Archive -LiteralPath $files -DestinationPath $archive -Force
 Write-Host "Built: $OutputDir"

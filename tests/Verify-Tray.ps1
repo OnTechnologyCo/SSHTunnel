@@ -1,4 +1,4 @@
-param([string]$Exe = (Join-Path (Split-Path $PSScriptRoot -Parent) 'output\SSHTunnelServer.exe'))
+﻿param([string]$Exe = (Join-Path (Split-Path $PSScriptRoot -Parent) 'output\SSHTunnelServer.exe'))
 $ErrorActionPreference = 'Stop'
 Add-Type @'
 using System;
@@ -70,7 +70,7 @@ try {
  [void][TrayProbe]::PostMessage($hostWindow.Handle,[TrayProbe]::RegisterWindowMessage('TaskbarCreated'),[IntPtr]::Zero,[IntPtr]::Zero)
  [void][TrayProbe]::PostMessage($hostWindow.Handle,0x111,[IntPtr]1002,[IntPtr]::Zero)
  $restarted=Wait-State $base $headers $state.started
- if($restarted.version -ne '1.3.0'){throw 'Unexpected server version.'}
+ if($restarted.version -ne '1.3.1'){throw 'Unexpected server version.'}
  [void][TrayProbe]::PostMessage($hostWindow.Handle,0x10,[IntPtr]::Zero,[IntPtr]::Zero)
  if(-not $process.WaitForExit(10000)){throw 'Tray did not shut down gracefully.'}
  if($process.ExitCode -ne 0){throw 'Tray exited with an error.'}

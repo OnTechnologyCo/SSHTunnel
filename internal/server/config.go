@@ -24,7 +24,7 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-const Version = "1.3.0"
+const Version = "1.3.1"
 
 type User struct {
 	Name               string   `json:"name"`

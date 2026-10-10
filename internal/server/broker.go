@@ -165,8 +165,12 @@ func (p *peer) openLeaseMode(key, name, protocol string) (*lease, error) {
 		if !web.Enabled || web != s.active.Web {
 			return nil, errors.New("웹 터널 설정을 활성화한 뒤 서버를 재시작하세요")
 		}
+		// brokerMu를 잡은 상태에서 발급·등록하여 동시 요청도 기존 주소를 덮어쓰지 않습니다.
+		id, err := newWebID(s.tunnels, rand.Reader)
+		if err != nil {
+			return nil, err
+		}
 		ctx, cancel := context.WithCancel(p.ctx)
-		id := secret()[:32]
 		host := id + "." + web.BaseDomain
 		l := &lease{info: TunnelInfo{ID: id, Name: name, Address: host, Host: host, Protocol: "http", URL: web.Scheme + "://" + host}, keyHash: hash, owner: p, ctx: ctx, cancel: cancel, started: time.Now().UTC(), webStreams: map[net.Conn]bool{}}
 		l.webTransport = l.newWebTransport()

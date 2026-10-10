@@ -85,7 +85,7 @@ func (s *Server) WebHandler() http.Handler {
 			return
 		}
 		id := strings.TrimSuffix(host, suffix)
-		if len(id) != 32 || strings.Contains(id, ".") {
+		if !validWebID(id) {
 			http.NotFound(w, r)
 			return
 		}
@@ -225,5 +225,5 @@ func (s *Server) WebDeployment() map[string]string {
 		address = "https://*." + domain
 		tls = "    tls C:/certs/tunnel-fullchain.pem C:/certs/tunnel-private.key\n"
 	}
-	return map[string]string{"dns": "*." + domain + " → 터널 중계 서버의 공개 IP", "certificate": "*." + domain, "urlExample": c.Scheme + "://" + strings.Repeat("a", 32) + "." + domain, "caddy": fmt.Sprintf("# 기존 사이트와 분리된 추가 사이트 블록 예시입니다.\n%s {\n%s    reverse_proxy %s\n}\n", address, tls, upstream), "maxBodyMB": strconv.Itoa(c.MaxBodyMB)}
+	return map[string]string{"dns": "*." + domain + " → 터널 중계 서버의 공개 IP", "certificate": "*." + domain, "urlExample": c.Scheme + "://a7k2m9." + domain, "caddy": fmt.Sprintf("# 기존 사이트와 분리된 추가 사이트 블록 예시입니다.\n%s {\n%s    reverse_proxy %s\n}\n", address, tls, upstream), "maxBodyMB": strconv.Itoa(c.MaxBodyMB)}
 }

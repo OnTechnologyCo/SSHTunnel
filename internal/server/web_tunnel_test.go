@@ -87,6 +87,11 @@ func TestWebTunnelRandomURLRoutingCookiesAndHeaders(t *testing.T) {
 	s, opts := webFixture(t, target.URL)
 	a := sdkOpen(t, opts)
 	b := sdkOpen(t, opts)
+	for _, endpoint := range []tunnel.Endpoint{a.Endpoint(), b.Endpoint()} {
+		if !validWebID(endpoint.ID) || endpoint.Host != endpoint.ID+".tunnel.example.test" {
+			t.Fatalf("expected a six-character web address: %+v", endpoint)
+		}
+	}
 	if a.Endpoint().URL == b.Endpoint().URL || a.Endpoint().Port != 0 || strings.Contains(a.Endpoint().Address, ":") || !strings.HasPrefix(a.Endpoint().URL, "https://") {
 		t.Fatal("not a port-free random URL")
 	}

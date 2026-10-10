@@ -1,4 +1,4 @@
-param([string]$Setup = (Join-Path (Split-Path $PSScriptRoot -Parent) 'output\SSHTunnelServer-Setup-1.3.0.exe'))
+﻿param([string]$Setup = (Join-Path (Split-Path $PSScriptRoot -Parent) 'output\SSHTunnelServer-Setup-1.3.1.exe'))
 $ErrorActionPreference = 'Stop'
 $uninstallKey='HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\OnTech.SSHTunnelServer_is1'
 $runKey='HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
@@ -14,6 +14,7 @@ try {
  if($p.ExitCode -ne 0){throw ('Installer failed: '+$p.ExitCode)}
  $exe=Join-Path $install 'SSHTunnelServer.exe'
  if(-not (Test-Path $exe)){throw 'Installed executable missing.'}
+ foreach($file in @('Configure-Firewall.cmd','scripts\Configure-Firewall.ps1')){if(-not(Test-Path (Join-Path $install $file))){throw ('Firewall helper missing: '+$file)}}
  $source=Join-Path (Split-Path $Setup -Parent) 'SSHTunnelServer.exe'
  if((Get-FileHash $source).Hash -ne (Get-FileHash $exe).Hash){throw 'Installed executable hash mismatch.'}
  if(-not (Test-Path $uninstallKey)){throw 'Uninstall entry missing.'}
