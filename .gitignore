@@ -1,0 +1,28 @@
+# Generated distribution files
+/output/
+/dist/
+/backups/
+*.exe
+*.test
+*.syso
+*.log
+coverage.out
+
+# Runtime configuration and secrets (local only)
+/data/
+**/data/
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.token
+server.json
+demo.json
+endpoint.json
+
+# Machine-specific test records and cleanup instructions
+/docs/BROWSER-TEST.md
+/scripts/Stop-BrowserTest.ps1
+/tests/desktop-verification.json
+/tests/verification-*.json

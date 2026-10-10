@@ -1,0 +1,6 @@
+{
+  "server": "relay.example.com:2222",
+  "user": "browser-test",
+  "accessKey": "REPLACE_WITH_ISSUED_ACCESS_KEY",
+  "fingerprint": "REPLACE_WITH_SHA256_HOST_FINGERPRINT"
+}
