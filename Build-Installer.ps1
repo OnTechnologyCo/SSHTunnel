@@ -18,6 +18,6 @@ if (-not $ISCC) {
 if (-not $ISCC -or -not (Test-Path -LiteralPath $ISCC)) { throw 'Install Inno Setup 6/7 or supply -ISCC with its compiler path.' }
 & $ISCC (Join-Path $PSScriptRoot 'installer\SSHTunnelServer.iss')
 if ($LASTEXITCODE -ne 0) { throw 'Inno Setup compilation failed.' }
-$setup = Join-Path $PSScriptRoot 'output\SSHTunnelServer-Setup-1.3.1.exe'
+$setup = Join-Path $PSScriptRoot 'output\SSHTunnelServer-Setup-1.4.0.exe'
 Get-Item -LiteralPath $setup | Select-Object FullName,Length
 Get-FileHash -LiteralPath $setup -Algorithm SHA256 | Format-List

@@ -60,7 +60,7 @@ Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'docs\WEB-TUNNELS.md') -Destinat
 $sdkDocs = Join-Path $sdk 'docs'
 New-Item -ItemType Directory -Path $sdkDocs -Force | Out-Null
 foreach ($doc in @('TUNNEL-API.md','WEB-TUNNELS.md')) { Copy-Item -LiteralPath (Join-Path $PSScriptRoot ('docs\'+$doc)) -Destination $sdkDocs -Force }
-Compress-Archive -Path (Join-Path $sdk '*') -DestinationPath (Join-Path $OutputDir 'SSHTunnel-GoSDK-1.3.1.zip') -Force
+Compress-Archive -Path (Join-Path $sdk '*') -DestinationPath (Join-Path $OutputDir 'SSHTunnel-GoSDK-1.4.0.zip') -Force
 
 $dist = Join-Path $PSScriptRoot 'dist'
 New-Item -ItemType Directory -Path $dist -Force | Out-Null

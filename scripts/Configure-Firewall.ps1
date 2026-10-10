@@ -35,15 +35,28 @@ try {
     if ($sshUri.IsLoopback) { Write-Warning 'SSH 수신 주소가 루프백입니다. 외부 접속에는 서버 설정에서 0.0.0.0 등의 수신 주소가 필요합니다.' }
     else { $ports += [pscustomobject]@{Name='SSH';Port=[string]$sshUri.Port;Program=$ServerExe} }
     if ($config.web -and $config.web.enabled) {
-        if ($config.web.scheme -eq 'https') { $webPort = 443 }
+        $webProgram = 'Any'
+        if ($config.web.scheme -eq 'https') {
+            $webPort = 443
+            if ($config.web.tlsMode -eq 'native') {
+                $tlsListen = $config.web.httpsListen
+                if (-not $tlsListen) { $tlsListen = '0.0.0.0:443' }
+                $tlsUri = [Uri]('https://' + $tlsListen)
+                $webPort = $tlsUri.Port
+                if ($webPort -lt 1 -or $webPort -gt 65535) { throw 'HTTPS 수신 포트를 확인하세요.' }
+                if ($tlsUri.IsLoopback) { Write-Warning '내장 HTTPS가 루프백 수신입니다. 외부 접속에는 외부 수신 주소가 필요합니다.' }
+                $webProgram = $ServerExe
+            }
+        }
         elseif ($config.web.scheme -eq 'http') { $webPort = 80 }
         else { throw '웹 접속 방식은 http 또는 https여야 합니다.' }
         if ($webPort -eq $adminUri.Port -or $webPort -eq $sshUri.Port) { throw '공개 웹 포트가 관리/SSH 포트와 충돌합니다.' }
-        $ports += [pscustomobject]@{Name='Web';Port=[string]$webPort;Program='Any'}
+        $ports += [pscustomobject]@{Name='Web';Port=[string]$webPort;Program=$webProgram}
         $webListeners = @(Get-NetTCPConnection -State Listen -LocalPort $webPort -ErrorAction SilentlyContinue)
         if (-not ($webListeners | Where-Object {$_.LocalAddress -notin @('127.0.0.1','::1')})) {
             Write-Warning "외부 웹 TCP $webPort 수신기가 없습니다. 방화벽 허용만으로 웹 접속은 되지 않습니다."
-            Write-Warning "앞단 웹 서버가 요청을 $($config.web.listen)로 전달하도록 설정하세요. HTTPS는 도메인 인증서도 필요합니다."
+            if ($config.web.tlsMode -eq 'native') { Write-Warning '서버를 재시작하고 관리 화면에서 내장 HTTPS 상태와 인증서 등록/발급을 확인하세요.' }
+            else { Write-Warning "외부 HTTPS 프록시가 없으면 관리 화면에서 내장 HTTPS를 선택하세요. 외부 프록시를 사용하면 $($config.web.listen)로 전달하도록 설정하세요." }
         }
     }
     if ($IncludeTcpPorts -and $config.broker.enabled) {

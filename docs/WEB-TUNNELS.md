@@ -1,8 +1,26 @@
-# 포트 없는 랜덤 웹 주소 · 1.3.1
+# 포트 없는 랜덤 웹 주소 · 1.4.0
 
 브라우저용 터널은 `https://<6자리 랜덤키>.tunnel.example.com` 형식의 주소를 발급합니다. 브라우저에 별도 포트를 입력하지 않습니다. 모든 웹 터널은 공통 게이트웨이를 사용하며, 터널마다 TCP 포트를 만들지 않습니다. 서버 프로그램과 중계 서버 사이는 기존 SSH 암호화 연결을 사용합니다.
 
 1.3.1부터 예를 들어 `https://a7k2m9.tunnel.example.com`처럼 발급합니다. 사용 중인 주소와 충돌하면 다시 생성하며, 인증키와 터널 소유권 키의 길이는 그대로 유지합니다. 1.3.0 SDK와 호환되며 서버 업데이트 후 다시 연결하면 새 6자리 주소를 받습니다.
+
+## 1.4.0: 별도 웹 서버 없이 내장 HTTPS 사용
+
+1. 기존 프로그램을 종료하고 1.4.0 설치 파일로 업데이트합니다. 기존 데이터와 계정은 유지됩니다.
+2. 서버 설정에서 자동 터널·웹 터널을 켜고 웹 기본 도메인을 입력합니다. 예: `tunnel.ontechdev.com`.
+3. HTTPS 처리 방식을 **내장 HTTPS**, 공개 수신 주소를 **0.0.0.0:443**, 내부 HTTP 주소를 **127.0.0.1:17894**로 저장합니다. 트레이에서 서버를 다시 시작합니다.
+4. 같은 화면의 **내장 HTTPS · 인증서**에서 Cloudflare 영역 도메인(예: `ontechdev.com`)과 API 토큰을 입력합니다. 토큰 권한은 해당 영역의 **Zone Read / DNS Edit**로 제한합니다. 선택한 도메인의 DNS 인증용 TXT 레코드만 생성·삭제하며 기존 A/CNAME은 변경하지 않습니다.
+5. Let's Encrypt 이용약관에 동의하고 **인증서 발급 · HTTPS 적용**을 누릅니다. 발급 상태와 오류는 화면에 표시됩니다. DNS 전파에 몇 분 걸릴 수 있습니다. 인증서가 발급되면 재시작 없이 적용됩니다.
+6. 설치 폴더의 `Configure-Firewall.cmd` 또는 시작 메뉴의 **접속 포트 방화벽 설정**을 실행합니다. 내장 HTTPS 포트는 SSHTunnelServer.exe에 한정해 허용합니다.
+7. 서버 프로그램을 다시 연결하고 새로 발급된 `https://6자리.tunnel.ontechdev.com` 주소로 접속합니다. 기본 도메인이나 IP만 입력하면 개별 터널이 선택되지 않습니다.
+
+Cloudflare에는 `*.tunnel` DNS 레코드를 중계 서버 IP로 연결합니다. 직접 접속 구성은 DNS 전용을 사용하세요. 브라우저가 신뢰하는 공인 인증서를 DNS-01 방식으로 발급하므로 인증서 발급용 80 포트나 별도 Caddy/IIS 설치가 필요하지 않습니다. Cloudflare API, Let's Encrypt(HTTPS), 공개 DNS(1.1.1.1/8.8.8.8)로 나가는 연결은 필요합니다. `_acme-challenge`가 다른 DNS에 위임된 구성은 이 자동 발급 기능에서 지원하지 않습니다.
+
+자동 갱신을 켜면 서버 실행 중 매시간 확인하여 인증서 유효기간의 마지막 1/3에 갱신을 시도합니다. 실패하면 기존 인증서를 유지하고 최소 6시간 후 재시도합니다. PC가 꺼져 있으면 갱신할 수 없습니다. 토큰 삭제 버튼으로 자동 갱신을 중지할 수 있습니다. 수동 인증서 등록도 자동 갱신을 중지합니다.
+
+이미 인증서가 있으면 인증서 체인 PEM과 개인키 PEM을 직접 등록할 수 있습니다. 인증서는 `*.웹기본도메인`을 포함하고 키가 일치하며 유효기간 내여야 합니다. DNS 전용 직접 접속에는 Cloudflare Origin 인증서나 자체 서명 인증서가 브라우저에서 신뢰되지 않으므로 공인 인증서를 사용하세요. 토큰·개인키는 데이터 폴더의 `https` 하위에 접근 권한을 제한해 보관하며 관리 API 응답·이벤트 로그에는 포함하지 않습니다. 토큰은 채팅이나 GitHub에 올리지 마세요.
+
+443 포트 충돌 시 다른 프로그램을 종료하거나 기존 서비스를 변경하지 않습니다. HTTPS 오류를 관리 화면에 표시하고 SSH/관리 화면은 계속 실행합니다. 기존 1.3.x 설정은 **외부 프록시 방식**으로 유지하므로 업데이트 후 내장 HTTPS를 직접 선택해야 합니다. 내장 HTTPS의 포트 수신이나 인증서가 준비되지 않으면 동작하지 않는 웹 URL을 새로 발급하지 않습니다. 관리 화면의 수신 준비 상태는 인터넷 경로·공유기·방화벽까지 보증하는 외부 접속 검사는 아닙니다.
 
 ## 동작
 
@@ -10,7 +28,7 @@
 2. Go SDK에서 `Protocol: "http"`로 중계 서버에 접속합니다.
 3. 중계 서버가 소문자 영문·숫자 6자리 식별자로 서브도메인을 발급합니다.
 4. 브라우저는 반환된 `Endpoint().URL`에 접속합니다.
-5. HTTPS 앞단 프록시는 Host를 보존해 웹 게이트웨이에 전달합니다. 게이트웨이는 해당 웹 터널의 SSH 채널로 요청을 전달합니다.
+5. 내장 HTTPS가 직접 요청을 처리하거나 기존 HTTPS 앞단 프록시가 Host를 보존해 웹 게이트웨이에 전달합니다. 게이트웨이는 해당 웹 터널의 SSH 채널로 요청을 전달합니다.
 
 페이지 경로, 쿼리, HTTP 메서드, 요청 본문, 로그인용 Authorization·쿠키, 웹소켓 업그레이드와 SSE 스트리밍을 전달합니다. 루트 경로를 바꾸지 않으므로 `/assets/...` 같은 웹 리소스를 그대로 사용할 수 있습니다. 각 터널은 별도 브라우저 origin입니다.
 
@@ -23,7 +41,7 @@
 | 기본 도메인 | `tunnel.example.com` |
 | 와일드카드 DNS | `*.tunnel.example.com` → 중계 서버 또는 앞단 프록시의 공개 IP |
 | HTTPS 인증서 | `*.tunnel.example.com`을 포함하는 인증서 |
-| 외부 수신 | 앞단 HTTPS 프록시의 TCP 443 |
+| 외부 수신 | 내장 HTTPS 또는 앞단 프록시의 TCP 443 |
 | 내부 웹 게이트웨이 | `127.0.0.1:17894` (기본) |
 | 서버 프로그램의 SSH 접속 | 별도로 설정한 SSH 주소·포트 (기본 2222) |
 
@@ -34,7 +52,7 @@
 - **자동 터널 기능 사용**과 **웹 터널 기능 사용**을 켭니다.
 - 기본 도메인에는 `tunnel.example.com`만 입력합니다. `https://`, `*.`와 포트는 제외합니다.
 - 게이트웨이는 기본 루프백 주소를 사용합니다. SSH·관리 화면과 다른 빈 포트여야 합니다.
-- 브라우저 접속 방식은 `HTTPS`로 선택합니다. 이것은 공개 URL의 방식이며 내장 게이트웨이 자체가 TLS 인증서를 관리하는 기능은 아닙니다.
+- 브라우저 접속 방식은 `HTTPS`로 선택합니다. 1.4.0의 **내장 HTTPS**에서는 이 프로그램이 인증서를 관리합니다. **외부 프록시** 방식은 별도 웹 서버가 인증서를 처리합니다.
 - **DNS·프록시 설정 예시 보기**에서 저장된 설정에 맞는 예시를 확인합니다.
 - 설정을 저장하고 트레이에서 서버를 다시 시작합니다.
 
@@ -81,7 +99,7 @@ go run ./examples/publish -protocol http -server relay.example.com:2222 -user my
 
 ## 원본 웹 프로그램 설정
 
-- SDK의 Target은 HTTP 서버입니다. 외부 HTTPS는 앞단에서 종료되고 서버 프로그램까지의 터널은 SSH로 암호화됩니다. HTTPS 전용 로컬 원본은 현재 직접 지원하지 않습니다.
+- SDK의 Target은 HTTP 서버입니다. 외부 HTTPS는 내장 수신기 또는 앞단 프록시에서 종료되고 서버 프로그램까지의 터널은 SSH로 암호화됩니다. HTTPS 전용 로컬 원본은 현재 직접 지원하지 않습니다.
 - Host는 발급받은 도메인으로 전달됩니다. Host 허용 목록이 있는 프레임워크는 이 도메인을 허용하세요.
 - `X-Forwarded-Proto`, `X-Forwarded-Host`, `X-Forwarded-Port`로 공개 URL을 알 수 있습니다. 원본 앱의 프록시 신뢰 설정을 자신의 터널 연결에 한정하세요.
 - 외부에서 보낸 위조 Forwarded 계열 헤더는 제거합니다. `X-Forwarded-For`에는 게이트웨이에 직접 접속한 피어 IP가 들어갑니다. 앞단 프록시 뒤에서는 그 프록시 주소가 보입니다.
@@ -107,6 +125,14 @@ SDK에서 Protocol을 생략하면 이전 버전과 동일한 TCP 포트 방식�
 
 실제 중계 서버 PC에서 시작 메뉴의 **접속 포트 방화벽 설정** 또는 설치 폴더의 `Configure-Firewall.cmd`를 실행하세요. UAC 권한 승인을 거쳐 저장된 SSH 포트와 웹 방식에 따른 TCP 443(HTTPS) 또는 80(HTTP)을 허용합니다. 기본적으로 관리 포트·내부 게이트웨이·TCP 배정 범위는 공개하지 않습니다.
 
-수신기 없이 방화벽만 허용해도 웹 연결은 되지 않습니다. 도구가 수신기 없음 경고를 표시하면 HTTPS 인증서와 앞단 프록시를 먼저 구성하세요. 공유기 뒤에서는 같은 외부 포트의 포트포워딩도 필요합니다.
+수신기 없이 방화벽만 허용해도 웹 연결은 되지 않습니다. 도구가 수신기 없음 경고를 표시하면 내장 HTTPS와 인증서를 설정하거나 기존 앞단 프록시를 구성하세요. 공유기 뒤에서는 같은 외부 포트의 포트포워딩도 필요합니다.
 
 사용자 지정 데이터 폴더는 `powershell -File scripts/Configure-Firewall.ps1 -DataDir "D:\TunnelData" -Apply`로 지정합니다. `-Apply`를 생략하면 진단만 합니다. 기존 TCP 방식을 사용하는 경우에만 `-IncludeTcpPorts`를 추가하세요.
+
+## Built-in HTTPS (English)
+
+Version 1.4.0 can terminate HTTPS in the tunnel server itself. Choose **native** TLS, keep the HTTP gateway on loopback, set the HTTPS listener to `0.0.0.0:443`, save, and restart the tray server. Existing configurations retain proxy mode until explicitly changed.
+
+Use the local admin page to import a valid wildcard certificate/key pair or issue one from Let's Encrypt using a Cloudflare API token scoped to **Zone Read and DNS Edit** for the relevant zone. Accept the CA terms in the form. Only temporary DNS-01 TXT records created by this operation are deleted; existing A/CNAME records are preserved. DNS delegation/CNAME challenge delegation is not supported. The relay needs outbound HTTPS and access to public DNS resolvers. Public CA issuance and real external reachability require a real authorized domain/token and are separate from offline integration tests.
+
+Certificates activate without disconnecting existing tunnels. Automatic renewal checks hourly during the final third of the certificate lifetime and retries no more often than every six hours after failures. Tokens and keys are stored in ACL-restricted files and omitted from admin responses. Manually imported certificates must be publicly trusted for direct browser access; Cloudflare Origin CA certificates alone are not browser-trusted. Firewall configuration remains available from the installer and Start menu. Other processes occupying the HTTPS port are never terminated.

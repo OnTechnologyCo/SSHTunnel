@@ -33,6 +33,12 @@ try {
     Assert (@($global:sshtunnelFirewallTestRules.Values | Where-Object {$_.Port -eq '443'}).Count -eq 1) 'Missing HTTPS rule'
     & $helper -DataDir $root -ServerExe $exe -Apply
     Assert ($global:sshtunnelFirewallTestRules.Count -eq 2 -and $global:sshtunnelFirewallTestNewCount -eq 2) 'Repeated apply duplicated rules'
+    $config.web.tlsMode='native';$config.web.httpsListen='0.0.0.0:8443'
+    $config | ConvertTo-Json -Depth 4 | Set-Content $configPath -Encoding UTF8
+    & $helper -DataDir $root -ServerExe $exe -Apply
+    Assert (@($global:sshtunnelFirewallTestRules.Values | Where-Object {$_.Port -eq '8443' -and $_.Program -eq $exe}).Count -eq 1) 'Native HTTPS program/port scope missing'
+    Assert (@($global:sshtunnelFirewallTestRules.Values | Where-Object {$_.Port -eq '443'}).Count -eq 0) 'Old HTTPS port retained'
+    $config.web.tlsMode='proxy'
     $config.listen='0.0.0.0:39444';$config.web.scheme='http'
     $config | ConvertTo-Json -Depth 4 | Set-Content $configPath -Encoding UTF8
     & $helper -DataDir $root -ServerExe $exe -Apply

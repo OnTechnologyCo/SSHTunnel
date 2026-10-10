@@ -1,8 +1,14 @@
+> **1.4.0 — 내장 HTTPS / Built-in HTTPS**
+>
+> 별도 HTTPS 서버 없이 443 수신, 인증서 PEM 등록, Cloudflare DNS 인증을 통한 Let's Encrypt 발급·자동 갱신을 지원합니다. 기존 1.3.x 설치는 외부 프록시 설정을 보존하므로 **서버 설정 → 내장 HTTPS**로 전환하고 도메인 인증서를 설정하세요. [설정 순서](docs/WEB-TUNNELS.md#140-별도-웹-서버-없이-내장-https-사용)
+>
+> Native TLS termination, PEM import, and Cloudflare DNS-01 certificate issuance/renewal are available in 1.4.0. Existing proxy configurations are preserved. Configure native HTTPS and domain validation in the local admin UI; see [deployment instructions](docs/WEB-TUNNELS.md).
+
 # SSHTunnel Server
 
 특정 장비·목적지에 고정되지 않는 **범용 SSH TCP 터널링 서버**입니다. 일반 `ssh` 클라이언트에서 Local(`-L`), Reverse(`-R`), 동적 SOCKS5(`-D`) 포워딩을 사용할 수 있습니다. 서버 실행 파일 하나에 SSH 엔진과 한국어 관리 화면이 포함되어 있습니다.
 
-## 포트 입력 없는 브라우저 주소 (1.3.1)
+## 포트 입력 없는 브라우저 주소 (1.4.0)
 
 랜덤 부분은 소문자 영문·숫자 **6자리**입니다(예: `https://a7k2m9.tunnel.example.com`). 중복 주소는 다시 생성합니다. 설치 완료 화면의 기본 체크된 **접속 포트 방화벽 허용** 또는 시작 메뉴 **접속 포트 방화벽 설정**에서 저장된 SSH 포트와 웹 포트의 Windows 방화벽 규칙을 적용할 수 있습니다. HTTPS 인증서와 앞단 프록시는 별도로 구성해야 합니다.
 
@@ -24,9 +30,9 @@
 
 중계 서버의 SSH 포트와 자동 배정 포트 범위에 외부 접속이 가능해야 합니다. 자동 터널은 초기 비활성 상태이며 실제 공개 주소 설정 후 활성화합니다. 기존 SSH `-L` / `-R` / `-D` 기능도 유지합니다.
 
-## 설치 및 트레이 실행 (1.3.1)
+## 설치 및 트레이 실행 (1.4.0)
 
-1. `output\SSHTunnelServer-Setup-1.3.1.exe`를 실행합니다. 한국어·영어 설치 화면을 제공합니다.
+1. `output\SSHTunnelServer-Setup-1.4.0.exe`를 실행합니다. 한국어·영어 설치 화면을 제공합니다.
 2. 설치 후 시작 메뉴의 **SSHTunnel Server**를 실행하면 **창·콘솔·브라우저를 자동으로 열지 않고 트레이 아이콘만 표시**합니다.
 3. 트레이 아이콘을 클릭하고 **관리 화면 열기**를 선택합니다. 기본 관리 주소는 `http://127.0.0.1:17893`입니다.
 4. **접속 계정 → 계정 추가**에서 SSH 공개키 또는 암호를 등록합니다. 기본 SSH 포트는 **2222**입니다.
@@ -130,7 +136,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\Build.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\Build-Installer.ps1
 ```
 
-실행 파일은 Windows GUI 서브시스템으로 빌드하며 아이콘·버전·asInvoker 매니페스트를 포함합니다. 설치 파일은 `output\SSHTunnelServer-Setup-1.3.1.exe`입니다. 설치판은 현재 사용자용 트레이 프로그램이며 서비스를 자동 등록하지 않으며, 설치 완료 화면에서 선택한 경우 관리자 권한으로 접속 포트 방화벽 규칙을 적용합니다.
+실행 파일은 Windows GUI 서브시스템으로 빌드하며 아이콘·버전·asInvoker 매니페스트를 포함합니다. 설치 파일은 `output\SSHTunnelServer-Setup-1.4.0.exe`입니다. 설치판은 현재 사용자용 트레이 프로그램이며 서비스를 자동 등록하지 않으며, 설치 완료 화면에서 선택한 경우 관리자 권한으로 접속 포트 방화벽 규칙을 적용합니다.
 
 소스 구조: `cmd/sshtunnel` 실행·Windows 서비스, `internal/server` SSH·정책·관리 API, `internal/server/web` 내장 관리 화면, `scripts` 운영 도구입니다. 외부 모듈은 `go.mod`와 `go.sum`으로 고정됩니다. 배포본 `licenses`에 Go 및 의존 모듈의 라이선스를 포함합니다.
 
