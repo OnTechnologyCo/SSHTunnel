@@ -1,6 +1,6 @@
 //go:build !windows
 
-package server
+package securefile
 
 import (
 	"errors"
@@ -24,8 +24,8 @@ func PrivateDir(path string) error {
 	return os.Chmod(path, 0700)
 }
 func PrivateFile(path string) error       { return os.Chmod(path, 0600) }
-func atomicReplace(from, to string) error { return os.Rename(from, to) }
-func lockData(path string) (*os.File, error) {
+func AtomicReplace(from, to string) error { return os.Rename(from, to) }
+func Lock(path string) (*os.File, error) {
 	f, e := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0600)
 	if e != nil {
 		return nil, e

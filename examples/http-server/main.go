@@ -32,7 +32,7 @@ func run() error {
 	web := &http.Server{Handler: mux}
 	defer web.Close()
 	go web.Serve(local)
-	session, e := tunnel.Open(ctx, tunnel.Options{Protocol: "http", Server: os.Getenv("TUNNEL_SERVER"), User: os.Getenv("TUNNEL_USER"), AccessKey: os.Getenv("TUNNEL_ACCESS_KEY"), Fingerprint: os.Getenv("TUNNEL_FINGERPRINT"), Target: local.Addr().String(), Name: "HTTP example"})
+	session, e := tunnel.Open(ctx, tunnel.Options{Protocol: "http", Identity: "http-server-example", Server: os.Getenv("TUNNEL_SERVER"), User: os.Getenv("TUNNEL_USER"), AccessKey: os.Getenv("TUNNEL_ACCESS_KEY"), Fingerprint: os.Getenv("TUNNEL_FINGERPRINT"), Target: local.Addr().String(), Name: "HTTP example"})
 	if e != nil {
 		return e
 	}

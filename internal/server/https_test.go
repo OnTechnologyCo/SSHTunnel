@@ -79,7 +79,7 @@ func nativeFixture(t *testing.T, target string, certificate bool) (*Server, tunn
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { s.Close(); store.Close() })
-	return s, tunnel.Options{Server: s.Addr(), User: "web", AccessKey: key, Fingerprint: s.Fingerprint(), Target: strings.TrimPrefix(target, "http://"), Protocol: "http"}, roots
+	return s, tunnel.Options{Server: s.Addr(), User: "web", AccessKey: key, Fingerprint: s.Fingerprint(), Target: strings.TrimPrefix(target, "http://"), Protocol: "http", Ephemeral: true}, roots
 }
 func nativeClient(s *Server, roots *x509.CertPool) *http.Client {
 	tr := &http.Transport{Proxy: nil, DisableKeepAlives: true, TLSClientConfig: &tls.Config{RootCAs: roots, MinVersion: tls.VersionTLS12}, DialContext: func(ctx context.Context, network, _ string) (net.Conn, error) {

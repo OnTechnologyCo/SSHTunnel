@@ -6,6 +6,16 @@ import (
 )
 
 func (s *Server) brokerAdmin(mux *http.ServeMux) {
+	mux.HandleFunc("GET /api/web-addresses", func(w http.ResponseWriter, r *http.Request) { writeJSON(w, 200, s.WebAddressViews()) })
+	mux.HandleFunc("POST /api/web-addresses/{id}/rotate", func(w http.ResponseWriter, r *http.Request) {
+		id, err := s.rotateWebAddress(r.PathValue("id"))
+		if err != nil {
+			writeJSON(w, 409, map[string]string{"error": err.Error()})
+			return
+		}
+		s.event("address", "웹 주소 재발급: "+r.PathValue("id")+" → "+id)
+		writeJSON(w, 200, map[string]string{"id": id})
+	})
 	mux.HandleFunc("GET /api/tunnels", func(w http.ResponseWriter, r *http.Request) { writeJSON(w, 200, s.TunnelViews()) })
 	mux.HandleFunc("DELETE /api/tunnels/{id}", func(w http.ResponseWriter, r *http.Request) {
 		if !s.CloseTunnel(r.PathValue("id")) {

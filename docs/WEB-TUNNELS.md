@@ -1,12 +1,40 @@
-# 포트 없는 랜덤 웹 주소 · 1.4.0
+# 포트 없는 고정 웹 주소 · 1.5.0
 
 브라우저용 터널은 `https://<6자리 랜덤키>.tunnel.example.com` 형식의 주소를 발급합니다. 브라우저에 별도 포트를 입력하지 않습니다. 모든 웹 터널은 공통 게이트웨이를 사용하며, 터널마다 TCP 포트를 만들지 않습니다. 서버 프로그램과 중계 서버 사이는 기존 SSH 암호화 연결을 사용합니다.
 
 1.3.1부터 예를 들어 `https://a7k2m9.tunnel.example.com`처럼 발급합니다. 사용 중인 주소와 충돌하면 다시 생성하며, 인증키와 터널 소유권 키의 길이는 그대로 유지합니다. 1.3.0 SDK와 호환되며 서버 업데이트 후 다시 연결하면 새 6자리 주소를 받습니다.
 
+
+## 1.5.0: PC·서비스별 주소 유지
+
+- 최초 발급된 6자리 주소는 **계정 + 터널 식별키**에 예약합니다. 연결 종료·PC 재부팅·중계 서버 재시작·접속 인증키 교체로 바뀌지 않습니다. 오프라인이면 웹 접속은 불가능하지만 주소 예약은 유지됩니다.
+- Go SDK 1.5.0은 HTTP 터널의 식별키를 사용자 설정 폴더의 `OnTech/SSHTunnel/identities`에 자동 저장합니다. Windows에서는 보통 `%APPDATA%\OnTech\SSHTunnel\identities`입니다. 항상 같은 Windows 사용자/서비스 계정으로 실행하세요.
+- 한 PC의 서비스는 서로 다른 `Identity`를 사용하세요. 생략하면 `Target`을 사용하므로 로컬 포트 변경 시 주소도 달라집니다. 임의 포트를 쓰는 프로그램은 `Identity: "my-service"`처럼 변하지 않는 이름을 반드시 지정하세요. 표시용 `Name` 변경은 주소에 영향을 주지 않습니다.
+- 같은 계정으로 여러 PC를 사용할 수 있습니다. 각 PC가 생성한 키가 다르므로 각자 주소를 받습니다. 다른 PC에 식별키 폴더를 복사하면 동일한 서비스로 인식되며 동시 접속은 거절됩니다.
+- 기존 연동 프로그램에서 이미 `TunnelKey`를 영구 저장한다면 중계 서버 업데이트만으로 적용됩니다. 매번 새 키를 만드는 연동은 SDK를 업데이트하거나 첫 키를 저장해 재사용해야 합니다. 직접 지정한 `TunnelKey`는 SDK가 대신 저장하지 않습니다.
+- `KeyDirectory`로 전용 식별키 저장 폴더를 지정할 수 있습니다. 해당 폴더의 권한을 제한하므로 다른 용도의 공용 폴더를 지정하지 마세요. `Ephemeral: true`는 매번 새 키·주소를 발급하므로 예약 한도를 소비합니다.
+- 관리 화면 **서버 상태 → 예약된 웹 주소**에서 연결 중/오프라인 상태를 확인합니다. 주소 변경이 필요하면 연결 프로그램의 자동 재연결을 중지하고 연결을 종료한 뒤 **주소 재발급**을 누르세요. 다음 연결부터 같은 식별키로 새 주소를 받습니다. 폐기된 주소는 다른 프로그램에 재사용하지 않습니다.
+- 예약은 자동 만료되지 않습니다. 폐기 주소를 포함해 계정당 1,024개·서버 전체 65,536개를 보관하며, 활성 터널 한도와 별개입니다. 예약 한도에 도달해도 기존 주소 재접속은 가능합니다.
+- 중계 서버의 데이터 폴더에 `web-addresses.json`을 저장합니다. 식별키 원문은 저장하지 않습니다. 저장 실패 시 주소를 발급하지 않으며 손상된 파일을 새 파일로 덮어쓰지 않습니다.
+
+### 업데이트와 백업
+
+1. 중계 서버를 종료한 뒤 1.5.0 설치 파일로 업데이트하고 다시 실행합니다. 기존 계정·인증서·설정은 유지합니다.
+2. 연결 프로그램의 Go SDK를 1.5.0으로 교체하거나 `TunnelKey`를 영구 저장하도록 수정합니다. SDK 소스를 복사할 때 `internal/securefile`도 함께 포함하세요.
+3. 프로그램별 고정 `Identity`로 연결해 주소를 확인합니다. **1.4.0 이하의 활성 주소는 디스크에 저장되지 않았으므로 이번 업데이트 후 최초 연결에서 한 번 바뀔 수 있습니다.**
+4. 클라이언트의 식별키 폴더와 중계 서버의 전체 데이터 폴더를 함께 백업하세요. 파일 삭제·다른 OS 계정으로 실행·SSH 호스트 키 또는 접속 계정 변경 시에는 기존 주소가 복원되지 않을 수 있습니다. 웹 기본 도메인을 바꾸면 URL의 도메인 부분도 바뀝니다.
+
+```go
+session, err := tunnel.Open(ctx, tunnel.Options{
+    Server: relay, User: user, AccessKey: accessKey, Fingerprint: fingerprint,
+    Protocol: "http", Target: "127.0.0.1:9000", Identity: "my-service",
+})
+// 끊겼다면 같은 Options로 Open을 다시 호출합니다. URL 예약은 유지됩니다.
+```
+
 ## 1.4.0: 별도 웹 서버 없이 내장 HTTPS 사용
 
-1. 기존 프로그램을 종료하고 1.4.0 설치 파일로 업데이트합니다. 기존 데이터와 계정은 유지됩니다.
+1. 기존 프로그램을 종료하고 최신 설치 파일로 업데이트합니다. 기존 데이터와 계정은 유지됩니다.
 2. 서버 설정에서 자동 터널·웹 터널을 켜고 웹 기본 도메인을 입력합니다. 예: `tunnel.ontechdev.com`.
 3. HTTPS 처리 방식을 **내장 HTTPS**, 공개 수신 주소를 **0.0.0.0:443**, 내부 HTTP 주소를 **127.0.0.1:17894**로 저장합니다. 트레이에서 서버를 다시 시작합니다.
 4. 같은 화면의 **내장 HTTPS · 인증서**에서 Cloudflare 영역 도메인(예: `ontechdev.com`)과 API 토큰을 입력합니다. 토큰 권한은 해당 영역의 **Zone Read / DNS Edit**로 제한합니다. 선택한 도메인의 DNS 인증용 TXT 레코드만 생성·삭제하며 기존 A/CNAME은 변경하지 않습니다.
@@ -136,3 +164,7 @@ Version 1.4.0 can terminate HTTPS in the tunnel server itself. Choose **native**
 Use the local admin page to import a valid wildcard certificate/key pair or issue one from Let's Encrypt using a Cloudflare API token scoped to **Zone Read and DNS Edit** for the relevant zone. Accept the CA terms in the form. Only temporary DNS-01 TXT records created by this operation are deleted; existing A/CNAME records are preserved. DNS delegation/CNAME challenge delegation is not supported. The relay needs outbound HTTPS and access to public DNS resolvers. Public CA issuance and real external reachability require a real authorized domain/token and are separate from offline integration tests.
 
 Certificates activate without disconnecting existing tunnels. Automatic renewal checks hourly during the final third of the certificate lifetime and retries no more often than every six hours after failures. Tokens and keys are stored in ACL-restricted files and omitted from admin responses. Manually imported certificates must be publicly trusted for direct browser access; Cloudflare Origin CA certificates alone are not browser-trusted. Firewall configuration remains available from the installer and Start menu. Other processes occupying the HTTPS port are never terminated.
+
+### Persistent identity (1.5.0)
+
+HTTP addresses are reserved on disk by account and ownership key, including while offline. The 1.5.0 SDK persists a random key per relay fingerprint, account and service `Identity` (defaults to `Target`) in the OS user configuration directory. Set a stable `Identity` when local ports change. Keep both client identity files and the relay data directory backed up. Older integrations must reuse their `TunnelKey`; a server-only upgrade cannot identify a client that generates a fresh key every time. Upgrading from 1.4.0 may change the URL once because older addresses were memory-only. TCP port allocation is unchanged.

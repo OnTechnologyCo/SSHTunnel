@@ -17,10 +17,11 @@ func main() {
 	fingerprint := flag.String("fingerprint", "", "중계 서버 SHA256 호스트 지문")
 	name := flag.String("name", "my-service", "터널 이름")
 	protocol := flag.String("protocol", "tcp", "tcp: 포트 주소, http: 브라우저용 랜덤 URL")
+	identity := flag.String("identity", "", "고정 서비스 식별명 · 생략하면 target 사용")
 	flag.Parse()
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
-	session, e := tunnel.Open(ctx, tunnel.Options{Protocol: *protocol, Server: *relay, User: *user, AccessKey: os.Getenv("TUNNEL_ACCESS_KEY"), Fingerprint: *fingerprint, Target: *target, Name: *name})
+	session, e := tunnel.Open(ctx, tunnel.Options{Protocol: *protocol, Identity: *identity, Server: *relay, User: *user, AccessKey: os.Getenv("TUNNEL_ACCESS_KEY"), Fingerprint: *fingerprint, Target: *target, Name: *name})
 	if e != nil {
 		fmt.Fprintln(os.Stderr, e)
 		os.Exit(1)

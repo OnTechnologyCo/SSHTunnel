@@ -48,10 +48,14 @@ foreach ($module in @('golang.org/x/crypto', 'golang.org/x/sys')) {
 }
 # SDK source bundle: embedding in an existing server requires no extra client EXE.
 $sdk = Join-Path $OutputDir 'SDK'
+if (Test-Path $sdk) { Remove-Item -LiteralPath $sdk -Recurse -Force }
 New-Item -ItemType Directory -Path $sdk -Force | Out-Null
 foreach ($name in @('pkg','examples')) {
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot $name) -Destination $sdk -Recurse -Force
 }
+$sdkInternal = Join-Path $sdk 'internal'
+New-Item -ItemType Directory -Path $sdkInternal -Force | Out-Null
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'internal\securefile') -Destination $sdkInternal -Recurse -Force
 foreach ($name in @('go.mod','go.sum')) {
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot $name) -Destination $sdk -Force
 }
@@ -60,7 +64,7 @@ Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'docs\WEB-TUNNELS.md') -Destinat
 $sdkDocs = Join-Path $sdk 'docs'
 New-Item -ItemType Directory -Path $sdkDocs -Force | Out-Null
 foreach ($doc in @('TUNNEL-API.md','WEB-TUNNELS.md')) { Copy-Item -LiteralPath (Join-Path $PSScriptRoot ('docs\'+$doc)) -Destination $sdkDocs -Force }
-Compress-Archive -Path (Join-Path $sdk '*') -DestinationPath (Join-Path $OutputDir 'SSHTunnel-GoSDK-1.4.0.zip') -Force
+Compress-Archive -Path (Join-Path $sdk '*') -DestinationPath (Join-Path $OutputDir 'SSHTunnel-GoSDK-1.5.0.zip') -Force
 
 $dist = Join-Path $PSScriptRoot 'dist'
 New-Item -ItemType Directory -Path $dist -Force | Out-Null

@@ -21,7 +21,8 @@ import (
 )
 
 // Options의 AccessKey는 관리 화면에서 발급한 인증키입니다.
-// TunnelKey는 터널 식별용 키이며 비우면 Open이 임의 생성합니다.
+// HTTP 터널은 식별키를 PC에 보관하여 재접속 시 주소를 유지합니다.
+// TunnelKey를 지정하면 해당 키를 사용하며 호출자가 영구 보관해야 합니다.
 // Fingerprint는 관리 화면의 SSH 호스트 지문(SHA256:...)입니다.
 type Options struct {
 	Server         string
@@ -31,6 +32,9 @@ type Options struct {
 	Target         string
 	Name           string
 	TunnelKey      string
+	Identity       string // 같은 PC의 서비스 식별명. 기본값 Target; 동적 포트이면 고정 이름을 지정하세요.
+	KeyDirectory   string // 전용 식별키 폴더. 기본값: 사용자 설정 폴더/OnTech/SSHTunnel/identities
+	Ephemeral      bool   // true이면 새 식별키 생성 (HTTP 주소가 매번 달라짐)
 	Protocol       string // "http": 랜덤 웹 주소, "tcp" 또는 빈 값: 기존 포트 방식
 	MaxConnections int
 }
@@ -70,7 +74,7 @@ func validKey(s string) bool {
 
 // Open은 SSH 암호화 연결 안에서 터널 개설 API를 호출하고 접속 주소를 반환합니다.
 // 반환된 Session은 Target으로 데이터를 중계합니다. ctx 취소 또는 Close 시
-// 공개 주소와 활성 연결을 모두 닫습니다. 연결 손실 후에는 새 Open이 필요합니다.
+// 활성 연결을 닫되 웹 주소 예약은 유지합니다. 연결 손실 후에는 새 Open이 필요합니다.
 func Open(ctx context.Context, opts Options) (*Session, error) {
 	if opts.Protocol == "" {
 		opts.Protocol = "tcp"
@@ -95,7 +99,7 @@ func Open(ctx context.Context, opts Options) (*Session, error) {
 		return nil, errors.New("relay SHA256 host fingerprint is required")
 	}
 	if opts.TunnelKey == "" {
-		opts.TunnelKey, e = NewKey()
+		opts.TunnelKey, e = optionKey(opts)
 		if e != nil {
 			return nil, e
 		}
