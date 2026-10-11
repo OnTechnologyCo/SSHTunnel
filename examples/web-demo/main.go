@@ -123,7 +123,7 @@ func run(path string) error {
 	defer web.Close()
 	webErrors := make(chan error, 1)
 	go func() { webErrors <- web.Serve(listener) }()
-	session, err := tunnel.Open(ctx, tunnel.Options{Protocol: "http", Server: cfg.Server, User: cfg.User, AccessKey: cfg.AccessKey, Fingerprint: cfg.Fingerprint, Target: listener.Addr().String(), Name: "브라우저 통신 테스트", MaxConnections: 32})
+	session, err := tunnel.Open(ctx, tunnel.Options{Protocol: "http", Identity: "web-demo", KeyDirectory: filepath.Join(filepath.Dir(path), "identities"), Server: cfg.Server, User: cfg.User, AccessKey: cfg.AccessKey, Fingerprint: cfg.Fingerprint, Target: listener.Addr().String(), Name: "브라우저 통신 테스트", MaxConnections: 32})
 	if err != nil {
 		return fmt.Errorf("터널 연결 실패: %w", err)
 	}

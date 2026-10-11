@@ -1,6 +1,6 @@
 //go:build windows
 
-package server
+package securefile
 
 import (
 	"errors"
@@ -75,7 +75,7 @@ func PrivateFile(path string) error {
 	}
 	return privateACL(path, false)
 }
-func atomicReplace(from, to string) error {
+func AtomicReplace(from, to string) error {
 	a, e := windows.UTF16PtrFromString(from)
 	if e != nil {
 		return e
@@ -86,7 +86,7 @@ func atomicReplace(from, to string) error {
 	}
 	return windows.MoveFileEx(a, b, windows.MOVEFILE_REPLACE_EXISTING|windows.MOVEFILE_WRITE_THROUGH)
 }
-func lockData(path string) (*os.File, error) {
+func Lock(path string) (*os.File, error) {
 	p, e := windows.UTF16PtrFromString(path)
 	if e != nil {
 		return nil, e

@@ -169,7 +169,7 @@ func (p *peer) openLeaseMode(key, name, protocol string) (*lease, error) {
 			return nil, errors.New("내장 HTTPS가 준비되지 않았습니다. 관리 화면의 HTTPS 상태·인증서·포트를 확인하세요")
 		}
 		// brokerMu를 잡은 상태에서 발급·등록하여 동시 요청도 기존 주소를 덮어쓰지 않습니다.
-		id, err := newWebID(s.tunnels, rand.Reader)
+		id, err := s.Store.reserveWebAddress(p.user.Name, hash, name, s.tunnels)
 		if err != nil {
 			return nil, err
 		}

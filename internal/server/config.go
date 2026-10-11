@@ -24,7 +24,7 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-const Version = "1.4.0"
+const Version = "1.5.0"
 
 type User struct {
 	Name               string   `json:"name"`
@@ -59,6 +59,8 @@ type Store struct {
 	Signer    ssh.Signer
 	adminHash [32]byte
 	lock      *os.File
+	addressMu sync.Mutex
+	addresses map[string]webReservation
 	closeOnce sync.Once
 }
 
@@ -138,6 +140,9 @@ func NewStore(dir string) (*Store, error) {
 		return nil, err
 	}
 	s.adminHash = sha256.Sum256([]byte(value))
+	if err = s.loadWebAddresses(); err != nil {
+		return nil, err
+	}
 	success = true
 	return s, nil
 }

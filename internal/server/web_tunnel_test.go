@@ -44,7 +44,7 @@ func webFixture(t *testing.T, target string) (*Server, tunnel.Options) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { s.Close(); store.Close() })
-	return s, tunnel.Options{Server: s.Addr(), User: "web", AccessKey: key, Fingerprint: s.Fingerprint(), Target: strings.TrimPrefix(target, "http://"), Protocol: "http"}
+	return s, tunnel.Options{Server: s.Addr(), User: "web", AccessKey: key, Fingerprint: s.Fingerprint(), Target: strings.TrimPrefix(target, "http://"), Protocol: "http", Ephemeral: true}
 }
 func webRequest(t *testing.T, s *Server, host, method, path string, body io.Reader, headers http.Header) *http.Response {
 	t.Helper()

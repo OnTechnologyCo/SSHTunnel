@@ -26,3 +26,6 @@ endpoint.json
 /scripts/Stop-BrowserTest.ps1
 /tests/desktop-verification.json
 /tests/verification-*.json
+
+web-addresses.json
+**/identities/
