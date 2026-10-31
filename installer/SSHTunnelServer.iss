@@ -1,4 +1,4 @@
-#define AppVersion "1.5.0"
+﻿#define AppVersion "1.5.1"
 
 [Setup]
 AppId=OnTech.SSHTunnelServer
@@ -23,7 +23,7 @@ WizardStyle=modern
 AppMutex=Local\OnTech.SSHTunnelServer.Tray
 CloseApplications=no
 RestartApplications=no
-VersionInfoVersion=1.5.0.0
+VersionInfoVersion=1.5.1.0
 
 [Languages]
 Name: "korean"; MessagesFile: "compiler:Languages\Korean.isl"
@@ -48,6 +48,7 @@ Name: "desktopicon"; Description: "{cm:DesktopTask}"; Flags: unchecked
 Name: "startup"; Description: "{cm:StartupTask}"; Flags: unchecked
 
 [Files]
+Source: "..\output\build-info.txt"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\output\SSHTunnelServer.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\README.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\output\docs\*"; DestDir: "{app}\docs"; Flags: ignoreversion recursesubdirs createallsubdirs

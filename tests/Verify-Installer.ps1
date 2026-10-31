@@ -1,4 +1,4 @@
-﻿param([string]$Setup = (Join-Path (Split-Path $PSScriptRoot -Parent) 'output\SSHTunnelServer-Setup-1.5.0.exe'))
+﻿param([string]$Setup = (Join-Path (Split-Path $PSScriptRoot -Parent) 'output\SSHTunnelServer-Setup-1.5.1.exe'))
 $ErrorActionPreference = 'Stop'
 $uninstallKey='HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\OnTech.SSHTunnelServer_is1'
 $runKey='HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
@@ -23,6 +23,14 @@ try {
  $p=Start-Process $exe -ArgumentList ('init --data-dir "'+$data+'"') -Wait -PassThru
  if($p.ExitCode -ne 0){throw 'Installed executable init failed.'}
  $before=(Get-FileHash (Join-Path $data 'host_ed25519.pem')).Hash
+ # Reinstall over the existing app and verify every persistent file is retained.
+ $hashes=@{}
+ Get-ChildItem $data -File -Recurse | ForEach-Object {$hashes[$_.FullName]=(Get-FileHash $_.FullName).Hash}
+ $p=Start-Process $Setup -ArgumentList $arguments -Wait -PassThru
+ if($p.ExitCode -ne 0){throw 'Upgrade installation failed.'}
+ if((Get-FileHash $source).Hash -ne (Get-FileHash $exe).Hash){throw 'Upgrade executable hash mismatch.'}
+ foreach($path in $hashes.Keys){if((Get-FileHash $path).Hash -ne $hashes[$path]){throw 'Upgrade changed existing data.'}}
+ Write-Output 'UPGRADE PASS: reinstall preserved all existing data files.'
  $uninstaller=Join-Path $install 'unins000.exe'
  $p=Start-Process $uninstaller -ArgumentList '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART' -Wait -PassThru
  if($p.ExitCode -ne 0){throw 'Uninstall failed.'}
