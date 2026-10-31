@@ -38,7 +38,7 @@ TunnelKey만으로 중계 서버에 인증하거나 다른 연결의 터널을 �
 import "ontech/sshtunnel/pkg/tunnel"
 ```
 
-별도 프로젝트에서 로컬 소스를 참조하려면 그 프로젝트의 `go.mod`에 다음을 추가하고 `go mod tidy`를 실행합니다. 대상 프로젝트도 Go 1.26 이상이 필요합니다.
+별도 프로젝트에서 로컬 소스를 참조하려면 그 프로젝트의 `go.mod`에 다음을 추가하고 `go mod tidy`를 실행합니다. 대상 프로젝트도 Go 1.26.10 이상이 필요합니다.
 
 ```go
 require ontech/sshtunnel v0.0.0

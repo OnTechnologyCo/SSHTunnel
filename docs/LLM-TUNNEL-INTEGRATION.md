@@ -1,7 +1,7 @@
 # SSHTunnel 접속·주소 발급·프로그램 연동 가이드 — LLM용 단일 문서
 
 - 작성일: 2026-10-23
-- 기준: SSHTunnel 서버·Go SDK v1.5.0, 소스 커밋 38b7873
+- 배포 기준: SSHTunnel 서버·Go SDK v1.5.1 / Go 1.26.10. 주소 유지 동작은 v1.5.0과 동일합니다.
 - 대상: 기존 웹/API/MCP/데스크톱 프로그램에 외부 접속 기능을 추가하는 개발자·LLM
 - 목표: 로컬 서비스를 실행하고, 중계 서버에 접속하여 공개 URL을 받은 뒤, 연결이 끊겨도 같은 URL로 복구한다.
 - 이 문서는 다른 PC에서도 사용할 수 있다. 특정 개발 PC의 D 드라이브나 설치 경로에 의존하지 않는다.
@@ -80,12 +80,12 @@ SDK v1.5.0의 기본 저장 동작은 다음과 같다.
 
 ## 4. 가장 빠른 연결 확인 — SDK의 기존 예제
 
-빌드 PC에 Go 1.26 이상과 Git이 필요하다. 컴파일된 연결 도우미를 배포받는 실행 PC에는 Go·Git이 필요하지 않다.
+빌드 PC에 Go 1.26.10 이상과 Git이 필요하다. 컴파일된 연결 도우미를 배포받는 실행 PC에는 Go·Git이 필요하지 않다.
 
 아래는 비어 있는 작업 폴더에서 시작하는 예다. 원본 앱은 먼저 `127.0.0.1:9000`에서 HTTP로 실행되어 있어야 한다.
 
 ```powershell
-git clone --branch v1.5.0 --depth 1 https://github.com/OnTechnologyCo/SSHTunnel.git sshtunnel-sdk
+git clone --branch v1.5.1 --depth 1 https://github.com/OnTechnologyCo/SSHTunnel.git sshtunnel-sdk
 Set-Location .\sshtunnel-sdk
 
 # 실제 값은 운영 설정에서 주입한다. 인증키를 저장소나 명령행 인자로 넣지 않는다.
@@ -98,7 +98,7 @@ go run ./examples/publish -protocol http -server 'tunnel.ontechdev.com:39333' -u
 
 이 빠른 확인 예제와 다음 도우미가 **서로 다른 키 폴더**를 사용하면 주소도 달라질 수 있다. 동일 주소로 계속 쓸 목적이면 처음부터 다음 도우미를 사용하거나 기존 키 폴더를 지정한다.
 
-Git 없이 SDK를 받는 경우: [SSHTunnel-GoSDK-1.5.0.zip](https://github.com/OnTechnologyCo/SSHTunnel/releases/download/v1.5.0/SSHTunnel-GoSDK-1.5.0.zip). 압축 해제 후 `go.mod`가 있는 SDK 루트를 모듈 경로로 사용한다. `pkg/tunnel`만 복사하면 안 되며 `internal/securefile` 등 SDK 전체 구성이 필요하다.
+Git 없이 SDK를 받는 경우: [SSHTunnel-GoSDK-1.5.1.zip](https://github.com/OnTechnologyCo/SSHTunnel/releases/download/v1.5.1/SSHTunnel-GoSDK-1.5.1.zip). 압축 해제 후 `go.mod`가 있는 SDK 루트를 모듈 경로로 사용한다. `pkg/tunnel`만 복사하면 안 되며 `internal/securefile` 등 SDK 전체 구성이 필요하다.
 
 ## 5. 바로 빌드 가능한 연결 도우미
 
@@ -293,7 +293,7 @@ func main() {
 ```powershell
 go mod init example.com/tunnelagent
 New-Item -ItemType Directory -Path .\third_party -Force | Out-Null
-git clone --branch v1.5.0 --depth 1 https://github.com/OnTechnologyCo/SSHTunnel.git .\third_party\SSHTunnel
+git clone --branch v1.5.1 --depth 1 https://github.com/OnTechnologyCo/SSHTunnel.git .\third_party\SSHTunnel
 go mod edit '-require=ontech/sshtunnel@v0.0.0'
 go mod edit '-replace=ontech/sshtunnel=./third_party/SSHTunnel'
 go mod tidy
@@ -390,7 +390,7 @@ Go 앱에 직접 넣을 때는 `tunnel.Open(ctx, opts)`와 재접속 루프를 �
 8. 내장 HTTPS의 DNS 인증 발급 기능은 서버 관리 화면에서 Cloudflare Zone Read/DNS Edit 권한과 도메인을 지정한다. 기존 DNS나 다른 서비스의 443 포트를 임의 변경하지 않는다.
 9. 서버 재시작/업데이트 후에도 같은 데이터 폴더와 호스트 키를 사용한다. `web-addresses.json`만이 아니라 서버 데이터 전체를 백업한다.
 
-서버 설치 파일: [SSHTunnelServer-Setup-1.5.0.exe](https://github.com/OnTechnologyCo/SSHTunnel/releases/download/v1.5.0/SSHTunnelServer-Setup-1.5.0.exe). **이 파일은 중계 서버용이며 원본 앱에 붙이는 연결 도우미가 아니다.**
+서버 설치 파일: [SSHTunnelServer-Setup-1.5.1.exe](https://github.com/OnTechnologyCo/SSHTunnel/releases/download/v1.5.1/SSHTunnelServer-Setup-1.5.1.exe). **이 파일은 중계 서버용이며 원본 앱에 붙이는 연결 도우미가 아니다.**
 
 기본 데이터 위치는 실행 방식에 따라 다르다. 설치판 트레이는 `%LOCALAPPDATA%\SSHTunnel\data`, 서비스 설치 기본값은 `%ProgramData%\SSHTunnel`, 소스/포터블 시작 스크립트는 배포 폴더의 `data`를 사용할 수 있다. 재시작 방식을 바꾸면서 데이터 폴더까지 바뀌지 않도록 실제 `--data-dir`를 확인한다.
 
@@ -521,7 +521,7 @@ LLM의 완료 보고에는 다음을 포함한다.
 ## 13. 기준 자료와 검증 범위
 
 - 저장소: https://github.com/OnTechnologyCo/SSHTunnel
-- 고정 버전: https://github.com/OnTechnologyCo/SSHTunnel/releases/tag/v1.5.0
+- 고정 버전: https://github.com/OnTechnologyCo/SSHTunnel/releases/tag/v1.5.1
 - SDK API·연결 수명: `pkg/tunnel/tunnel.go`
 - 식별키 저장: `pkg/tunnel/identity.go`, `internal/securefile`
 - 주소 예약: `internal/server/web_addresses.go`

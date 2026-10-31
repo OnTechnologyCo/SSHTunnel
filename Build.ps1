@@ -1,5 +1,13 @@
 ﻿param([string]$OutputDir = (Join-Path $PSScriptRoot 'output'))
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'scripts\Go-Toolchain.ps1')
+$previousToolchain = $env:GOTOOLCHAIN
+Push-Location $PSScriptRoot
+try {
+$env:GOTOOLCHAIN = Get-ProjectGoToolchain
+$actual = (& go env GOVERSION).Trim()
+if ($LASTEXITCODE -ne 0 -or $actual -ne $env:GOTOOLCHAIN) { throw 'Pinned Go toolchain is unavailable.' }
+Write-Host "Building with $actual"
 $windres = Get-Command windres.exe -ErrorAction SilentlyContinue
 if (-not $windres -and (Test-Path 'C:\mingw64\bin\windres.exe')) { $windres = Get-Item 'C:\mingw64\bin\windres.exe' }
 if (-not $windres) { throw 'MinGW windres.exe is required to embed the icon and Windows manifest.' }
@@ -20,13 +28,14 @@ if ($LASTEXITCODE -ne 0) { throw 'Static analysis failed.' }
 New-Item -ItemType Directory -Path $OutputDir -Force | Out-Null
 & go build -trimpath -ldflags '-s -w -H=windowsgui' -o (Join-Path $OutputDir 'SSHTunnelServer.exe') ./cmd/sshtunnel
 if ($LASTEXITCODE -ne 0) { throw 'Build failed.' }
+Assert-ProjectGoBinary (Join-Path $OutputDir 'SSHTunnelServer.exe') | Set-Content (Join-Path $OutputDir 'build-info.txt')
 foreach ($name in @('Start-Server.cmd', 'Start-Server.vbs', 'Open-Admin.cmd', 'Configure-Firewall.cmd', 'README.md')) {
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot $name) -Destination $OutputDir -Force
 }
 # Package only reusable files; never include machine-specific test notes/scripts.
 $bundles = @{
     scripts = @('Install-Service.ps1','Uninstall-Service.ps1','Open-Admin.ps1','Configure-Firewall.ps1')
-    docs = @('OPERATIONS.md','TUNNEL-API.md','WEB-TUNNELS.md')
+    docs = @('OPERATIONS.md','TUNNEL-API.md','WEB-TUNNELS.md','LLM-TUNNEL-INTEGRATION.md')
 }
 foreach ($name in $bundles.Keys) {
     $destination = Join-Path $OutputDir $name
@@ -56,22 +65,26 @@ foreach ($name in @('pkg','examples')) {
 $sdkInternal = Join-Path $sdk 'internal'
 New-Item -ItemType Directory -Path $sdkInternal -Force | Out-Null
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'internal\securefile') -Destination $sdkInternal -Recurse -Force
-foreach ($name in @('go.mod','go.sum')) {
+foreach ($name in @('go.mod','go.sum','.go-version')) {
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot $name) -Destination $sdk -Force
 }
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'docs\TUNNEL-API.md') -Destination (Join-Path $sdk 'README.md') -Force
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'docs\WEB-TUNNELS.md') -Destination $sdk -Force
 $sdkDocs = Join-Path $sdk 'docs'
 New-Item -ItemType Directory -Path $sdkDocs -Force | Out-Null
-foreach ($doc in @('TUNNEL-API.md','WEB-TUNNELS.md')) { Copy-Item -LiteralPath (Join-Path $PSScriptRoot ('docs\'+$doc)) -Destination $sdkDocs -Force }
-Compress-Archive -Path (Join-Path $sdk '*') -DestinationPath (Join-Path $OutputDir 'SSHTunnel-GoSDK-1.5.0.zip') -Force
+foreach ($doc in @('TUNNEL-API.md','WEB-TUNNELS.md','LLM-TUNNEL-INTEGRATION.md')) { Copy-Item -LiteralPath (Join-Path $PSScriptRoot ('docs\'+$doc)) -Destination $sdkDocs -Force }
+Compress-Archive -Path (Join-Path $sdk '*') -DestinationPath (Join-Path $OutputDir 'SSHTunnel-GoSDK-1.5.1.zip') -Force
 
 $dist = Join-Path $PSScriptRoot 'dist'
 New-Item -ItemType Directory -Path $dist -Force | Out-Null
 # Include only distributable files. Never package a runtime data directory.
-$files = @('SSHTunnelServer.exe','Start-Server.cmd','Start-Server.vbs','Open-Admin.cmd','Configure-Firewall.cmd','README.md','scripts','docs','licenses','SDK') | ForEach-Object { Join-Path $OutputDir $_ }
+$files = @('SSHTunnelServer.exe','Start-Server.cmd','Start-Server.vbs','Open-Admin.cmd','Configure-Firewall.cmd','README.md','build-info.txt','scripts','docs','licenses','SDK') | ForEach-Object { Join-Path $OutputDir $_ }
 $archive = Join-Path $dist 'SSHTunnelServer-windows-amd64.zip'
 Compress-Archive -LiteralPath $files -DestinationPath $archive -Force
 Write-Host "Built: $OutputDir"
 Write-Host "Package: $archive"
 Get-FileHash -LiteralPath (Join-Path $OutputDir 'SSHTunnelServer.exe') -Algorithm SHA256 | Format-List
+} finally {
+    $env:GOTOOLCHAIN = $previousToolchain
+    Pop-Location
+}
